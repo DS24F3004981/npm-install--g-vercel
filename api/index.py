@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import pandas as pd
+import json
+import os
 import numpy as np
 
 app = FastAPI()
@@ -12,31 +13,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-df = pd.read_csv("telemetry.csv")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+file_path = os.path.join(BASE_DIR, "q-vercel-latency.json")
+
+with open(file_path, "r") as f:
+    data = json.load(f)
 
 @app.post("/")
-async def analyze(data: dict):
-    regions = data.get("regions", [])
-    threshold = data.get("threshold_ms", 180)
+async def analyze(payload: dict):
+    regions = payload.get("regions", [])
+    threshold = payload.get("threshold_ms", 180)
 
     result = {}
 
     for region in regions:
-        region_df = df[df["region"] == region]
+        region_records = [r for r in data if r["region"] == region]
 
-        if len(region_df) == 0:
+        if not region_records:
             continue
 
-        avg_latency = float(region_df["latency_ms"].mean())
-        p95_latency = float(np.percentile(region_df["latency_ms"], 95))
-        avg_uptime = float(region_df["uptime"].mean())
-        breaches = int((region_df["latency_ms"] > threshold).sum())
+        latencies = [r["latency_ms"] for r in region_records]
+        uptimes = [r["uptime"] for r in region_records]
 
         result[region] = {
-            "avg_latency": avg_latency,
-            "p95_latency": p95_latency,
-            "avg_uptime": avg_uptime,
-            "breaches": breaches
+            "avg_latency": float(np.mean(latencies)),
+            "p95_latency": float(np.percentile(latencies, 95)),
+            "avg_uptime": float(np.mean(uptimes)),
+            "breaches": int(sum(1 for l in latencies if l > threshold))
         }
 
     return result

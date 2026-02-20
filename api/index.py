@@ -33,7 +33,7 @@ async def analyze(payload: dict):
             continue
 
         latencies = [r["latency_ms"] for r in region_records]
-        uptimes = [r["uptime"] for r in region_records]
+        uptimes = [r["uptime_pct"] for r in region_records]  # ✅ FIXED HERE
 
         result[region] = {
             "avg_latency": float(np.mean(latencies)),

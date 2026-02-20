@@ -9,8 +9,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["POST"],
     allow_headers=["*"],
 )
 
@@ -34,7 +33,7 @@ async def analyze(payload: dict):
             continue
 
         latencies = [r["latency_ms"] for r in region_records]
-        uptimes = [r["uptime_pct"] for r in region_records]
+        uptimes = [r["uptime_pct"] for r in region_records]  # ✅ FIXED HERE
 
         result[region] = {
             "avg_latency": float(np.mean(latencies)),
